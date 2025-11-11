@@ -5,14 +5,52 @@ import usuariosRouter from './usuarios.routes.js';
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+// Configurar CORS - em desenvolvimento aceita qualquer origem
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Em desenvolvimento, aceitar qualquer origem
+    if (!origin || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      // Em produção, verificar origem permitida
+      const allowedOrigins = [
+        process.env.FRONTEND_URL || 'http://localhost:5173',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173'
+      ];
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Middleware de log para debug
+app.use((req, res, next) => {
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'N/A'}`);
+  next();
+});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+// Endpoint de teste para verificar conexão
+app.get('/test', (_req, res) => {
+  res.json({ 
+    message: 'Backend está funcionando!',
+    timestamp: new Date().toISOString(),
+    cors: 'Configurado'
+  });
 });
 
 app.use('/usuarios', usuariosRouter);

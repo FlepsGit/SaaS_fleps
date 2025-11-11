@@ -23,27 +23,40 @@ export default function SignupPage() {
     setLoading(true);
     setMessage('');
     try {
+      console.log('Tentando conectar em:', `${API_BASE}/usuarios`);
+      console.log('Dados enviados:', { ...form, active: true });
+      
       const res = await fetch(`${API_BASE}/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, active: true })
       });
       
+      console.log('Resposta recebida:', res.status, res.statusText);
+      
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
+        console.error('Erro na resposta:', json);
         throw new Error(json?.error || `Erro ${res.status}: ${res.statusText}`);
       }
       
       const json = await res.json();
+      console.log('Sucesso:', json);
       setMessage('Cadastro realizado com sucesso!');
       setForm({ nome: '', cpf: '', email: '', telefone: '', endereco: '', senha: '' });
     } catch (err) {
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setMessage('Erro de conexão: Verifique se o servidor backend está rodando em ' + API_BASE);
+      console.error('Erro completo no cadastro:', err);
+      console.error('Tipo do erro:', err.name);
+      console.error('Mensagem do erro:', err.message);
+      console.error('Stack:', err.stack);
+      
+      if (err.name === 'TypeError' && (err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+        setMessage(`Erro de conexão: Não foi possível conectar ao servidor em ${API_BASE}. Verifique se o backend está rodando.`);
+      } else if (err.message.includes('CORS')) {
+        setMessage('Erro de CORS: O servidor não está permitindo requisições deste origin.');
       } else {
         setMessage('Erro: ' + (err.message || 'Falha no cadastro'));
       }
-      console.error('Erro no cadastro:', err);
     } finally {
       setLoading(false);
     }
