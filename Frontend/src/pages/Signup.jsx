@@ -23,39 +23,57 @@ export default function SignupPage() {
     setLoading(true);
     setMessage('');
     try {
-      console.log('Tentando conectar em:', `${API_BASE}/usuarios`);
-      console.log('Dados enviados:', { ...form, active: true });
+      console.log('🚀 Tentando conectar em:', `${API_BASE}/usuarios`);
+      console.log('📤 Dados enviados:', { ...form, active: true });
       
-      const res = await fetch(`${API_BASE}/usuarios`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, active: true })
-      });
+      // Criar um AbortController para timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
       
-      console.log('Resposta recebida:', res.status, res.statusText);
-      
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        console.error('Erro na resposta:', json);
-        throw new Error(json?.error || `Erro ${res.status}: ${res.statusText}`);
+      try {
+        const res = await fetch(`${API_BASE}/usuarios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, active: true }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        console.log('✅ Resposta recebida:', res.status, res.statusText);
+        
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          console.error('❌ Erro na resposta:', json);
+          throw new Error(json?.error || `Erro ${res.status}: ${res.statusText}`);
+        }
+        
+        const json = await res.json();
+        console.log('🎉 Sucesso:', json);
+        setMessage('Cadastro realizado com sucesso!');
+        setForm({ nome: '', cpf: '', email: '', telefone: '', endereco: '', senha: '' });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Timeout: O servidor demorou muito para responder (mais de 10 segundos)');
+        }
+        throw fetchError;
       }
-      
-      const json = await res.json();
-      console.log('Sucesso:', json);
-      setMessage('Cadastro realizado com sucesso!');
-      setForm({ nome: '', cpf: '', email: '', telefone: '', endereco: '', senha: '' });
     } catch (err) {
-      console.error('Erro completo no cadastro:', err);
-      console.error('Tipo do erro:', err.name);
-      console.error('Mensagem do erro:', err.message);
-      console.error('Stack:', err.stack);
+      console.error('💥 Erro completo no cadastro:', err);
+      console.error('📋 Tipo do erro:', err.name);
+      console.error('📝 Mensagem do erro:', err.message);
+      console.error('🔍 Stack:', err.stack);
       
-      if (err.name === 'TypeError' && (err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
-        setMessage(`Erro de conexão: Não foi possível conectar ao servidor em ${API_BASE}. Verifique se o backend está rodando.`);
+      // Verificar se é erro de conexão
+      if (err.name === 'TypeError' && (err.message.includes('fetch') || err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('fetch failed'))) {
+        setMessage(`❌ Erro de conexão: Não foi possível conectar ao servidor em ${API_BASE}. ` +
+          `Verifique se o backend está rodando e acesse http://localhost:3001/health para testar.`);
+      } else if (err.message.includes('Timeout')) {
+        setMessage('⏱️ ' + err.message + ' Verifique os logs do backend.');
       } else if (err.message.includes('CORS')) {
-        setMessage('Erro de CORS: O servidor não está permitindo requisições deste origin.');
+        setMessage('🚫 Erro de CORS: O servidor não está permitindo requisições deste origin.');
       } else {
-        setMessage('Erro: ' + (err.message || 'Falha no cadastro'));
+        setMessage('❌ Erro: ' + (err.message || 'Falha no cadastro'));
       }
     } finally {
       setLoading(false);

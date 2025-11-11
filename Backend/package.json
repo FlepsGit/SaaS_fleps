@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test-connection": "node test-connection.js"
+    "test-connection": "node test-connection.js",
+    "test-post": "node test-post.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

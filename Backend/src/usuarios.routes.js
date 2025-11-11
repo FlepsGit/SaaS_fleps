@@ -52,27 +52,33 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    console.log('📥 Recebido POST /usuarios');
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+    
     // Verificar se Supabase está configurado
     if (!supabase) {
+      console.error('❌ Supabase não configurado!');
       return res.status(500).json({ 
         error: 'Servidor não configurado: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devem estar definidas no arquivo .env' 
       });
     }
     
-    console.log('Recebido POST /usuarios:', JSON.stringify(req.body, null, 2));
+    console.log('✅ Supabase configurado, validando dados...');
     
     const parse = usuarioSchema.safeParse(req.body);
     if (!parse.success) {
       const errors = parse.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
-      console.error('Erro de validação:', errors);
+      console.error('❌ Erro de validação:', errors);
       return res.status(400).json({ error: `Erro de validação: ${errors}` });
     }
+    
+    console.log('✅ Dados validados');
     
     const payload = { ...parse.data };
     // Remove id se existir (será gerado pelo Supabase)
     delete payload.id;
     
-    console.log('Inserindo no Supabase:', JSON.stringify(payload, null, 2));
+    console.log('💾 Inserindo no Supabase:', JSON.stringify(payload, null, 2));
     
     const { data, error } = await supabase
       .from('usuario')
@@ -81,7 +87,7 @@ router.post('/', async (req, res) => {
       .single();
     
     if (error) {
-      console.error('Erro do Supabase:', JSON.stringify(error, null, 2));
+      console.error('❌ Erro do Supabase:', JSON.stringify(error, null, 2));
       return res.status(400).json({ 
         error: error.message || 'Erro ao inserir no banco de dados',
         details: error.details || null,
@@ -89,11 +95,15 @@ router.post('/', async (req, res) => {
       });
     }
     
-    console.log('✓ Usuário criado com sucesso:', data?.id);
+    console.log('🎉 Usuário criado com sucesso:', data?.id);
     return res.status(201).json(data);
   } catch (err) {
-    console.error('Erro inesperado no POST /usuarios:', err);
-    res.status(500).json({ error: err.message || 'Erro inesperado no servidor' });
+    console.error('💥 Erro inesperado no POST /usuarios:', err);
+    console.error('Stack:', err.stack);
+    res.status(500).json({ 
+      error: err.message || 'Erro inesperado no servidor',
+      type: err.name || 'UnknownError'
+    });
   }
 });
 

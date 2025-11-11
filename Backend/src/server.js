@@ -55,9 +55,28 @@ app.get('/test', (_req, res) => {
 
 app.use('/usuarios', usuariosRouter);
 
-app.use((err, _req, res, _next) => {
+// Middleware de tratamento de erros melhorado
+app.use((err, req, res, next) => {
+  console.error('❌ Erro capturado:', err);
+  console.error('Stack:', err.stack);
+  
   const status = err.status || 500;
-  res.status(status).json({ error: err.message || 'Erro inesperado' });
+  res.status(status).json({ 
+    error: err.message || 'Erro inesperado',
+    status: status,
+    path: req.path,
+    method: req.method
+  });
+});
+
+// Capturar erros não tratados
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
 });
 
 app.listen(port, () => {
