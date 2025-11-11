@@ -44,6 +44,13 @@ export default function SignupPage() {
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
           console.error('❌ Erro na resposta:', json);
+          
+          // Tratar erros específicos
+          if (json.field) {
+            // Erro em campo específico (CPF/email duplicado)
+            throw new Error(`${json.field.toUpperCase()}: ${json.error}`);
+          }
+          
           throw new Error(json?.error || `Erro ${res.status}: ${res.statusText}`);
         }
         
