@@ -6,12 +6,12 @@ const router = Router();
 
 const usuarioSchema = z.object({
   id: z.string().uuid().optional(),
-  nome: z.string().min(1),
-  cpf: z.string().min(11).max(14),
-  email: z.string().email(),
+  nome: z.string().min(1, 'Nome é obrigatório'),
+  cpf: z.string().min(11, 'CPF deve ter no mínimo 11 caracteres').max(14, 'CPF deve ter no máximo 14 caracteres'),
+  email: z.string().email('Email inválido'),
   telefone: z.string().optional().nullable(),
   endereco: z.string().optional().nullable(),
-  senha: z.string().min(6),
+  senha: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
   active: z.boolean().optional()
 });
 
@@ -41,15 +41,50 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const parse = usuarioSchema.safeParse(req.body);
-  if (!parse.success) return res.status(400).json({ error: parse.error.flatten() });
-  const payload = { ...parse.data };
-  const { data, error } = await supabase
-    .from('usuario')
-    .insert(payload)
-    .select('*')
-    .single();
-  handleSupabase({ data, error, status: 201 }, res);
+  try {
+    // Verificar se Supabase está configurado
+    if (!supabase) {
+      return res.status(500).json({ 
+        error: 'Servidor não configurado: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devem estar definidas no arquivo .env' 
+      });
+    }
+    
+    console.log('Recebido POST /usuarios:', JSON.stringify(req.body, null, 2));
+    
+    const parse = usuarioSchema.safeParse(req.body);
+    if (!parse.success) {
+      const errors = parse.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ');
+      console.error('Erro de validação:', errors);
+      return res.status(400).json({ error: `Erro de validação: ${errors}` });
+    }
+    
+    const payload = { ...parse.data };
+    // Remove id se existir (será gerado pelo Supabase)
+    delete payload.id;
+    
+    console.log('Inserindo no Supabase:', JSON.stringify(payload, null, 2));
+    
+    const { data, error } = await supabase
+      .from('usuario')
+      .insert(payload)
+      .select('*')
+      .single();
+    
+    if (error) {
+      console.error('Erro do Supabase:', JSON.stringify(error, null, 2));
+      return res.status(400).json({ 
+        error: error.message || 'Erro ao inserir no banco de dados',
+        details: error.details || null,
+        hint: error.hint || null
+      });
+    }
+    
+    console.log('✓ Usuário criado com sucesso:', data?.id);
+    return res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro inesperado no POST /usuarios:', err);
+    res.status(500).json({ error: err.message || 'Erro inesperado no servidor' });
+  }
 });
 
 router.put('/:id', async (req, res) => {
