@@ -28,12 +28,22 @@ export default function SignupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, active: true })
       });
+      
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || `Erro ${res.status}: ${res.statusText}`);
+      }
+      
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Falha no cadastro');
       setMessage('Cadastro realizado com sucesso!');
       setForm({ nome: '', cpf: '', email: '', telefone: '', endereco: '', senha: '' });
     } catch (err) {
-      setMessage(err.message);
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setMessage('Erro de conexão: Verifique se o servidor backend está rodando em ' + API_BASE);
+      } else {
+        setMessage('Erro: ' + (err.message || 'Falha no cadastro'));
+      }
+      console.error('Erro no cadastro:', err);
     } finally {
       setLoading(false);
     }
