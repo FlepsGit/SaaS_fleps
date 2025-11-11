@@ -21,6 +21,11 @@ function handleSupabase({ data, error, status = 200 }, res) {
 }
 
 router.get('/', async (_req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ 
+      error: 'Servidor não configurado: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devem estar definidas no arquivo .env' 
+    });
+  }
   const { data, error } = await supabase
     .from('usuario')
     .select('*')
@@ -30,6 +35,11 @@ router.get('/', async (_req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
+  if (!supabase) {
+    return res.status(500).json({ 
+      error: 'Servidor não configurado: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devem estar definidas no arquivo .env' 
+    });
+  }
   const { id } = req.params;
   const { data, error } = await supabase
     .from('usuario')
